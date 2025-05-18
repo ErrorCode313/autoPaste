@@ -12,6 +12,16 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            output_name: step_paster.exe
+            pyinstaller_args: --onefile --name step_paster main.py
+          - os: ubuntu-latest
+            output_name: step_paster
+            pyinstaller_args: --onefile --name step_paster main.py
+          - os: macos-latest
+            output_name: step_paster
+            pyinstaller_args: --onefile --name step_paster main.py
 
     steps:
       - name: Checkout code
@@ -20,19 +30,40 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.10'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
+          pip install pyperclip pyautogui keyboard pynput
 
-      - name: Build executable
+      # Linux-specific dependencies
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          pyinstaller --onefile main.py
+          sudo apt-get update
+          sudo apt-get install -y python3-tk python3-dev scrot xclip
 
+      # Build with PyInstaller
+      - name: Build with PyInstaller (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          pyinstaller --onefile --name step_paster --hidden-import pyperclip --hidden-import pyautogui --hidden-import keyboard --hidden-import pynput --hidden-import win32api main.py
+
+      - name: Build with PyInstaller (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          pyinstaller --onefile --name step_paster --hidden-import pyperclip --hidden-import pyautogui --hidden-import pynput main.py
+
+      - name: Build with PyInstaller (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          pyinstaller --onefile --name step_paster --hidden-import pyperclip --hidden-import pyautogui --hidden-import pynput main.py
+
+      # Upload the executables as artifacts
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-build
-          path: dist/
+          name: step_paster-${{ runner.os }}
+          path: dist/${{ matrix.output_name }}
