@@ -1,0 +1,37 @@
+name: Build Step Paster for All Platforms
+
+on:
+  push:
+    paths:
+      - '**.py'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller pyperclip pyautogui
+
+    - name: Build executable
+      run: |
+        pyinstaller --onefile step_paster.py
+
+    - name: Upload executable
+      uses: actions/upload-artifact@v3
+      with:
+        name: step-paster-${{ runner.os }}
+        path: dist/
